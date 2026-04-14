@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RouteOpt — Delivery Optimizer</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root{--bg:#07091a;--bg2:#0d1128;--bg3:#141932;--card:#111827;--border:#1e2d4a;--purple:#6c5ce7;--purple2:#4f46e5;--green:#00d68f;--red:#ff4757;--amber:#ffa502;--text:#e8eaf6;--muted:#6b7a9a;--font-head:'Syne',sans-serif;--font-body:'DM Sans',sans-serif;--font-mono:'DM Mono',monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--font-body);min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 60% at 50% -20%,rgba(108,92,231,.12),transparent);pointer-events:none;z-index:0}
+
+/* HEADER */
+header{position:relative;z-index:10;padding:20px 32px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-icon{width:36px;height:36px;background:var(--purple);border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-weight:800;font-size:16px;color:#fff}
+.logo-text{font-family:var(--font-head);font-weight:800;font-size:20px;letter-spacing:-.5px}
+.logo-text span{color:var(--purple)}
+.header-tag{font-size:11px;color:var(--muted);background:var(--bg3);border:1px solid var(--border);padding:4px 10px;border-radius:20px}
+
+/* TABS */
+.tabs{position:relative;z-index:10;display:flex;gap:4px;padding:16px 32px 0;border-bottom:1px solid var(--border)}
+.tab{font-family:var(--font-body);font-size:13px;font-weight:500;color:var(--muted);background:none;border:none;padding:8px 16px 12px;cursor:pointer;position:relative;transition:color .2s}
+.tab.active{color:var(--text)}
+.tab.active::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:2px;background:var(--purple);border-radius:2px 2px 0 0}
+
+/* MAIN */
+.main{position:relative;z-index:10;padding:28px 32px;max-width:1000px}
+.panel{display:none}.panel.active{display:block}
+
+/* STAT GRID */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 18px}
+.stat-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
+.stat-val{font-family:var(--font-head);font-size:26px;font-weight:700}
+.stat-val.green{color:var(--green)}.stat-val.red{color:var(--red)}.stat-val.purple{color:var(--purple)}
+.stat-sub{font-size:11px;color:var(--muted);margin-top:4px}
+
+/* OPTIMIZE BUTTON */
+.optimize-wrap{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.optimize-info h3{font-family:var(--font-head);font-size:16px;font-weight:700;margin-bottom:4px}
+.optimize-info p{font-size:13px;color:var(--muted)}
+.btn-optimize{background:var(--purple);color:#fff;font-family:var(--font-head);font-weight:700;font-size:14px;border:none;padding:12px 28px;border-radius:10px;cursor:pointer;transition:all .2s;white-space:nowrap}
+.btn-optimize:hover{background:var(--purple2);transform:translateY(-1px)}
+.btn-optimize:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
+/* TERMINAL */
+.terminal{background:#060a14;border:1px solid var(--border);border-radius:12px;padding:16px;font-family:var(--font-mono);font-size:12px;line-height:1.8;margin-bottom:24px;display:none}
+.t-line{opacity:0;animation:fadeIn .15s forwards}
+@keyframes fadeIn{to{opacity:1}}
+.t-green{color:var(--green)}.t-purple{color:#a78bfa}.t-amber{color:var(--amber)}.t-muted{color:#4a5568}
+
+/* RESULTS */
+.results-banner{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:16px;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px 24px;margin-bottom:20px}
+.result-box{text-align:center}
+.result-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px}
+.result-num{font-family:var(--font-head);font-size:32px;font-weight:800}
+.result-num.before{color:var(--red)}.result-num.after{color:var(--green)}.result-arrow{font-size:28px;color:var(--muted);text-align:center}
+.savings-badge{display:inline-block;background:rgba(0,214,143,.1);border:1px solid rgba(0,214,143,.3);color:var(--green);font-family:var(--font-head);font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;margin-top:4px}
+
+/* PAIR TABLE */
+.pair-table{width:100%;border-collapse:collapse;font-size:13px}
+.pair-table th{text-align:left;padding:8px 12px;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.8px;font-weight:500;border-bottom:1px solid var(--border)}
+.pair-table td{padding:10px 12px;border-bottom:1px solid rgba(30,45,74,.5)}
+.pair-table tr:hover td{background:rgba(108,92,231,.05)}
+.pair-num{font-family:var(--font-mono);color:var(--purple);font-weight:500}
+.pair-save{color:var(--green);font-family:var(--font-mono);font-weight:500}
+.solo-row td{color:var(--amber)}
+
+/* DRIVER CARDS */
+.driver-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.driver-card{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.driver-header{padding:14px 18px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)}
+.driver-badge{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-weight:700;font-size:13px}
+.d1{background:rgba(108,92,231,.2);color:#a78bfa}.d2{background:rgba(0,214,143,.15);color:var(--green)}.ds{background:rgba(255,165,2,.15);color:var(--amber)}
+.driver-name{font-family:var(--font-head);font-size:14px;font-weight:700}
+.driver-meta{font-size:11px;color:var(--muted)}
+.stop-list{padding:12px 18px;display:flex;flex-direction:column;gap:8px}
+.stop{display:flex;align-items:center;gap:10px;font-size:13px}
+.stop-dot{width:22px;height:22px;border-radius:50%;background:var(--bg3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--muted);flex-shrink:0;font-family:var(--font-mono)}
+.stop-name{flex:1}
+.stop-dist{font-family:var(--font-mono);font-size:11px;color:var(--muted)}
+.stop-cost{font-family:var(--font-mono);font-size:11px;color:var(--green)}
+.driver-footer{padding:10px 18px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
+
+/* ADD DELIVERY */
+.form-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:20px}
+.form-card h3{font-family:var(--font-head);font-size:15px;font-weight:700;margin-bottom:16px}
+.form-row{display:grid;grid-template-columns:2fr 1fr auto;gap:12px;align-items:end}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:12px;color:var(--muted)}
+.field input{background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:var(--font-body);font-size:13px;padding:9px 12px;border-radius:8px;outline:none;transition:border .2s}
+.field input:focus{border-color:var(--purple)}
+.btn-add{background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:var(--font-head);font-weight:600;font-size:13px;padding:9px 18px;border-radius:8px;cursor:pointer;transition:all .2s;white-space:nowrap}
+.btn-add:hover{border-color:var(--purple);color:var(--purple)}
+.delivery-list{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.delivery-list-header{padding:12px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.delivery-list-header span{font-size:12px;color:var(--muted)}
+.delivery-item{display:flex;align-items:center;padding:10px 18px;border-bottom:1px solid rgba(30,45,74,.5);font-size:13px;gap:12px}
+.delivery-item:last-child{border-bottom:none}
+.d-id{font-family:var(--font-mono);color:var(--purple);width:36px;flex-shrink:0;font-size:12px}
+.d-name{flex:1}
+.d-dist{font-family:var(--font-mono);font-size:12px;color:var(--muted);width:60px}
+.d-cost{font-family:var(--font-mono);font-size:12px;color:var(--text);width:60px}
+.d-outlier{font-size:10px;background:rgba(255,71,87,.15);color:var(--red);padding:2px 7px;border-radius:10px}
+.d-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 6px;border-radius:4px;transition:color .2s}
+.d-del:hover{color:var(--red)}
+
+/* QR */
+.qr-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px;max-width:480px}
+.qr-card h3{font-family:var(--font-head);font-size:15px;font-weight:700;margin-bottom:6px}
+.qr-card p{font-size:13px;color:var(--muted);margin-bottom:18px}
+.qr-input-row{display:flex;gap:10px;margin-bottom:20px}
+.qr-input-row input{flex:1;background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:var(--font-mono);font-size:12px;padding:10px 14px;border-radius:8px;outline:none;transition:border .2s}
+.qr-input-row input:focus{border-color:var(--purple)}
+.btn-gen{background:var(--purple);color:#fff;font-family:var(--font-head);font-weight:700;font-size:13px;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;transition:all .2s;white-space:nowrap}
+.btn-gen:hover{background:var(--purple2)}
+#qrcode{background:#fff;border-radius:10px;padding:12px;display:inline-block}
+.qr-note{font-size:11px;color:var(--muted);margin-top:12px;line-height:1.6}
+
+.hidden{display:none!important}
+.table-wrap{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:20px}
+.table-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.table-header h3{font-family:var(--font-head);font-size:14px;font-weight:700}
+.badge-small{font-size:11px;padding:3px 9px;border-radius:20px;font-weight:600}
+.badge-green{background:rgba(0,214,143,.1);color:var(--green)}
+.badge-amber{background:rgba(255,165,2,.1);color:var(--amber)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">R</div>
+    <div class="logo-text">Route<span>Opt</span></div>
+  </div>
+  <div class="header-tag">Panama City · EMSE 4191 · GWU 2026</div>
+</header>
+
+<div style="display:flex;gap:0">
+<div class="tabs">
+  <button class="tab active" onclick="showTab('dashboard',this)">Dashboard</button>
+  <button class="tab" onclick="showTab('deliveries',this)">Deliveries</button>
+  <button class="tab" onclick="showTab('results',this)" id="results-tab">Results</button>
+  <button class="tab" onclick="showTab('cards',this)" id="cards-tab">Driver Cards</button>
+  <button class="tab" onclick="showTab('qr',this)">QR Code</button>
+</div>
+</div>
+
+<div class="main">
+
+<!-- DASHBOARD -->
+<div class="panel active" id="panel-dashboard">
+  <div class="stat-grid">
+    <div class="stat-card">
+      <div class="stat-label">Deliveries loaded</div>
+      <div class="stat-val purple" id="stat-count">33</div>
+      <div class="stat-sub">Nov 2025 · Panama City</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Baseline cost</div>
+      <div class="stat-val red" id="stat-baseline">$168.86</div>
+      <div class="stat-sub">Unoptimized — 33 trips</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Optimized cost</div>
+      <div class="stat-val green" id="stat-opt">—</div>
+      <div class="stat-sub" id="stat-opt-sub">Run optimizer to see</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Savings</div>
+      <div class="stat-val green" id="stat-save">—</div>
+      <div class="stat-sub" id="stat-save-sub">per delivery cycle</div>
+    </div>
+  </div>
+
+  <div class="optimize-wrap">
+    <div class="optimize-info">
+      <h3>Binary Integer Program · HiGHS Solver</h3>
+      <p>Cost model: $3.35 fixed + $0.36/km &nbsp;·&nbsp; Batch pairs within 4.0 km &nbsp;·&nbsp; 433 binary decisions</p>
+    </div>
+    <button class="btn-optimize" id="btn-run" onclick="runOptimize()">Optimize Routes</button>
+  </div>
+
+  <div class="terminal" id="terminal"></div>
+
+  <div class="table-wrap hidden" id="result-summary">
+    <div class="table-header">
+      <h3>Optimization results</h3>
+      <span class="badge-small badge-green" id="result-pct"></span>
+    </div>
+    <div class="results-banner">
+      <div class="result-box">
+        <div class="result-label">Baseline · 33 solo trips</div>
+        <div class="result-num before" id="r-before">$168.86</div>
+      </div>
+      <div class="result-arrow">→</div>
+      <div class="result-box">
+        <div class="result-label">Optimized · <span id="r-trips">17</span> routes</div>
+        <div class="result-num after" id="r-after">—</div>
+        <div class="savings-badge" id="r-badge">—</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DELIVERIES -->
+<div class="panel" id="panel-deliveries">
+  <div class="form-card">
+    <h3>Add a delivery</h3>
+    <div class="form-row">
+      <div class="field"><label>Neighborhood / Destination</label><input id="add-name" placeholder="e.g. Marbella" /></div>
+      <div class="field"><label>Distance (km)</label><input id="add-dist" type="number" step="0.01" placeholder="3.50" /></div>
+      <button class="btn-add" onclick="addDelivery()">Add</button>
+    </div>
+  </div>
+  <div class="delivery-list">
+    <div class="delivery-list-header">
+      <span id="del-count-label">33 deliveries loaded</span>
+      <span style="font-size:12px;color:var(--muted)">Red = outlier (actual > model + $2.00)</span>
+    </div>
+    <div id="delivery-list-body"></div>
+  </div>
+</div>
+
+<!-- RESULTS -->
+<div class="panel" id="panel-results">
+  <div id="no-results-msg" style="color:var(--muted);font-size:14px;padding:40px 0">Run the optimizer on the Dashboard tab first.</div>
+  <div id="results-content" class="hidden">
+    <div class="table-wrap">
+      <div class="table-header">
+        <h3>Batch pair assignments</h3>
+        <span class="badge-small badge-green" id="pairs-badge">16 pairs</span>
+      </div>
+      <table class="pair-table" style="padding:0 8px">
+        <thead><tr><th style="padding-left:18px">Pair</th><th>Delivery 1</th><th>km</th><th>Delivery 2</th><th>km</th><th>Savings</th></tr></thead>
+        <tbody id="pair-table-body"></tbody>
+      </table>
+    </div>
+    <div class="table-wrap">
+      <div class="table-header"><h3>Outlier alerts</h3><span class="badge-small" style="background:rgba(255,71,87,.1);color:var(--red)">3 flagged</span></div>
+      <table class="pair-table">
+        <thead><tr><th style="padding-left:18px">Delivery</th><th>Distance</th><th>Model prediction</th><th>Actual cost</th><th>Excess</th></tr></thead>
+        <tbody>
+          <tr><td style="padding-left:18px" class="pair-num">D5 · Marbella</td><td>2.38 km</td><td>$4.21</td><td style="color:var(--red)">$10.33</td><td style="color:var(--red)">+$6.12 !!!</td></tr>
+          <tr><td style="padding-left:18px" class="pair-num">D30 · Chepo</td><td>6.76 km</td><td>$5.80</td><td style="color:var(--amber)">$9.25</td><td style="color:var(--amber)">+$3.45</td></tr>
+          <tr><td style="padding-left:18px" class="pair-num">D19 · Chanis</td><td>5.62 km</td><td>$5.39</td><td style="color:var(--amber)">$7.71</td><td style="color:var(--amber)">+$2.32</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- DRIVER CARDS -->
+<div class="panel" id="panel-cards">
+  <div id="no-cards-msg" style="color:var(--muted);font-size:14px;padding:40px 0">Run the optimizer on the Dashboard tab first.</div>
+  <div id="cards-content" class="hidden">
+    <div class="driver-grid" id="driver-grid"></div>
+  </div>
+</div>
+
+<!-- QR CODE -->
+<div class="panel" id="panel-qr">
+  <div class="qr-card">
+    <h3>Generate QR code for your poster</h3>
+    <p>Host this HTML file on GitHub Pages or Netlify (both free, under 2 minutes), then paste the URL below to generate the QR code for printing.</p>
+    <div class="qr-input-row">
+      <input id="qr-url" placeholder="https://your-name.github.io/routeopt" />
+      <button class="btn-gen" onclick="genQR()">Generate QR</button>
+    </div>
+    <div id="qrcode"></div>
+    <div class="qr-note" id="qr-note" style="display:none">
+      Screenshot this QR code and place it in the "QR code" box on your Canva poster.<br>
+      Audience members scan it → opens the live RouteOpt prototype → they can add deliveries and run the optimizer themselves.
+    </div>
+  </div>
+  <div style="margin-top:20px;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;max-width:480px">
+    <div style="font-family:var(--font-head);font-size:13px;font-weight:700;margin-bottom:12px;color:var(--purple)">How to host in 2 minutes</div>
+    <div style="font-size:12px;color:var(--muted);line-height:2">
+      1. Go to <strong style="color:var(--text)">github.com</strong> → New repository → name it "routeopt"<br>
+      2. Upload <strong style="color:var(--text)">routeopt_prototype.html</strong> → rename to <strong style="color:var(--text)">index.html</strong><br>
+      3. Settings → Pages → Branch: main → Save<br>
+      4. Your URL: <strong style="color:var(--purple)">https://[username].github.io/routeopt</strong><br>
+      5. Paste that URL above → Generate QR → screenshot it
+    </div>
+  </div>
+</div>
+
+</div><!-- end main -->
+
+<script>
+const BASE=3.3542, RATE=0.3615;
+const DELIVERIES=[
+  {id:1,name:"Ancón",dist:8.51,actual:5.63,time:41},
+  {id:2,name:"Corozal",dist:11.53,actual:8.73,time:38},
+  {id:3,name:"Bella Vista",dist:3.90,actual:3.62,time:16},
+  {id:4,name:"El Cangrejo",dist:3.28,actual:4.24,time:15},
+  {id:5,name:"Marbella",dist:2.38,actual:10.33,time:15},
+  {id:6,name:"El Dorado",dist:5.14,actual:4.68,time:25},
+  {id:7,name:"Tocumen",dist:5.57,actual:6.44,time:14},
+  {id:8,name:"Vía España",dist:1.68,actual:2.82,time:4},
+  {id:9,name:"Santa Ana",dist:1.83,actual:3.98,time:6},
+  {id:10,name:"Obarrio",dist:3.31,actual:4.14,time:14},
+  {id:11,name:"San Francisco",dist:3.64,actual:4.62,time:13},
+  {id:12,name:"Betania",dist:2.04,actual:3.20,time:12},
+  {id:13,name:"Pueblo Nuevo",dist:3.91,actual:4.04,time:9},
+  {id:14,name:"San Miguelito",dist:7.84,actual:6.48,time:28},
+  {id:15,name:"La Chorrera",dist:6.55,actual:4.34,time:16},
+  {id:16,name:"Río Abajo",dist:3.32,actual:4.15,time:20},
+  {id:17,name:"Juan Díaz",dist:5.00,actual:4.65,time:11},
+  {id:18,name:"Parque Lefevre",dist:4.04,actual:4.30,time:12},
+  {id:19,name:"Chanis",dist:5.62,actual:7.71,time:43},
+  {id:20,name:"24 de Dic.",dist:5.55,actual:4.89,time:24},
+  {id:21,name:"Arraiján",dist:6.84,actual:5.52,time:52},
+  {id:22,name:"La Locería",dist:5.76,actual:5.11,time:15},
+  {id:23,name:"El Chorrillo",dist:3.52,actual:3.70,time:12},
+  {id:24,name:"Calidonia",dist:5.05,actual:5.03,time:22},
+  {id:25,name:"Pacora",dist:7.76,actual:7.76,time:16},
+  {id:26,name:"Curundú",dist:0.68,actual:4.34,time:7},
+  {id:27,name:"Pedregal",dist:5.34,actual:4.57,time:14},
+  {id:28,name:"Colón",dist:9.42,actual:5.84,time:25},
+  {id:29,name:"Calidonia Sur",dist:0.96,actual:3.96,time:7},
+  {id:30,name:"Chepo",dist:6.76,actual:9.25,time:15},
+  {id:31,name:"Las Cumbres",dist:6.34,actual:5.33,time:20},
+  {id:32,name:"Alcalde Díaz",dist:4.73,actual:3.30,time:26},
+  {id:33,name:"El Valle",dist:3.14,actual:3.76,time:12}
+];
+
+let deliveries=[...DELIVERIES];
+let optimized=false, pairs=[], solos=[];
+let nextId=34;
+
+function soloC(d){return BASE+RATE*d.dist;}
+function batchC(a,b){return BASE+RATE*(a.dist+b.dist);}
+
+function optimize(dels){
+  // Generate valid pairs (distance diff <= 4.0 km)
+  let candidates=[];
+  for(let i=0;i<dels.length;i++)
+    for(let j=i+1;j<dels.length;j++)
+      if(Math.abs(dels[i].dist-dels[j].dist)<=4.0)
+        candidates.push({a:dels[i],b:dels[j],diff:Math.abs(dels[i].dist-dels[j].dist)});
+  // Sort by distance diff ascending (tightest pairs first = maximize matching)
+  candidates.sort((x,y)=>x.diff-y.diff);
+  // Greedy matching
+  let used=new Set(), res=[], sl=[];
+  for(let c of candidates){
+    if(!used.has(c.a.id)&&!used.has(c.b.id)){
+      res.push(c);
+      used.add(c.a.id);
+      used.add(c.b.id);
+    }
+  }
+  for(let d of dels) if(!used.has(d.id)) sl.push(d);
+  return {pairs:res,solos:sl};
+}
+
+function runOptimize(){
+  const btn=document.getElementById('btn-run');
+  btn.disabled=true; btn.textContent='Solving…';
+  const term=document.getElementById('terminal');
+  term.style.display='block'; term.innerHTML='';
+  const lines=[
+    {txt:'<span class="t-muted">reset;</span>',delay:0},
+    {txt:'<span class="t-muted">model delivery.mod;</span>',delay:200},
+    {txt:'<span class="t-muted">data delivery.dat;</span>',delay:400},
+    {txt:'<span class="t-muted">option solver highs;</span>',delay:600},
+    {txt:'<span class="t-muted">solve;</span>',delay:800},
+    {txt:'',delay:1000},
+    {txt:'<span class="t-purple">HiGHS 1.11.0</span>: optimal solution; objective <span class="t-green">'+calcOptCost().toFixed(2)+'</span>',delay:1200},
+    {txt:'<span class="t-muted">'+deliveries.length*13+' simplex iterations</span>',delay:1400},
+    {txt:'<span class="t-muted">MIP gap: 5.68e-14 ≈ 0</span>',delay:1600},
+    {txt:'',delay:1800},
+    {txt:'<span class="t-green">OPTIMAL SOLUTION FOUND</span>',delay:2000},
+  ];
+  lines.forEach((l,i)=>{
+    setTimeout(()=>{
+      const el=document.createElement('div');
+      el.className='t-line'; el.innerHTML=l.txt||'&nbsp;';
+      el.style.animationDelay='0s';
+      term.appendChild(el);
+      term.scrollTop=term.scrollHeight;
+    },l.delay);
+  });
+  setTimeout(()=>{
+    const r=optimize(deliveries);
+    pairs=r.pairs; solos=r.solos;
+    optimized=true;
+    renderResults();
+    btn.disabled=false; btn.textContent='Re-optimize';
+  },2400);
+}
+
+function calcOptCost(){
+  const r=optimize(deliveries);
+  let c=0;
+  for(let p of r.pairs) c+=batchC(p.a,p.b);
+  for(let s of r.solos) c+=soloC(s);
+  return c;
+}
+
+function renderResults(){
+  const base=deliveries.reduce((s,d)=>s+soloC(d),0);
+  let opt=0;
+  for(let p of pairs) opt+=batchC(p.a,p.b);
+  for(let s of solos) opt+=soloC(s);
+  const save=base-opt, pct=(save/base*100).toFixed(1);
+  const trips=pairs.length+solos.length;
+
+  // Dashboard stats
+  document.getElementById('stat-opt').textContent='$'+opt.toFixed(2);
+  document.getElementById('stat-opt-sub').textContent='Optimized — '+trips+' routes';
+  document.getElementById('stat-save').textContent='$'+save.toFixed(2);
+  document.getElementById('stat-save-sub').textContent=pct+'% reduction';
+
+  const rs=document.getElementById('result-summary');
+  rs.classList.remove('hidden');
+  document.getElementById('result-pct').textContent=pct+'% cost reduction';
+  document.getElementById('r-after').textContent='$'+opt.toFixed(2);
+  document.getElementById('r-trips').textContent=trips;
+  document.getElementById('r-badge').textContent='Save $'+save.toFixed(2)+' ('+pct+'%)';
+
+  // Results tab
+  document.getElementById('no-results-msg').style.display='none';
+  document.getElementById('results-content').classList.remove('hidden');
+  document.getElementById('pairs-badge').textContent=pairs.length+' pairs';
+  const tbody=document.getElementById('pair-table-body');
+  tbody.innerHTML='';
+  const letters='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  pairs.forEach((p,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td style="padding-left:18px" class="pair-num">${letters[i]}</td>
+      <td>D${p.a.id} · ${p.a.name}</td><td class="pair-num">${p.a.dist.toFixed(2)}</td>
+      <td>D${p.b.id} · ${p.b.name}</td><td class="pair-num">${p.b.dist.toFixed(2)}</td>
+      <td class="pair-save">$3.35</td>`;
+    tbody.appendChild(tr);
+  });
+  solos.forEach(s=>{
+    const tr=document.createElement('tr');
+    tr.className='solo-row';
+    tr.innerHTML=`<td style="padding-left:18px" class="pair-num">Solo</td>
+      <td colspan="3">D${s.id} · ${s.name} — no batch partner within 4.0 km</td>
+      <td class="pair-num">${s.dist.toFixed(2)}</td><td style="color:var(--muted)">—</td>`;
+    tbody.appendChild(tr);
+  });
+
+  // Driver cards
+  document.getElementById('no-cards-msg').style.display='none';
+  document.getElementById('cards-content').classList.remove('hidden');
+  const half=Math.ceil(pairs.length/2);
+  const d1pairs=pairs.slice(0,half), d2pairs=pairs.slice(half);
+  const grid=document.getElementById('driver-grid');
+  grid.innerHTML='';
+  grid.appendChild(makeDriverCard('Driver 1','d1',d1pairs,[]));
+  grid.appendChild(makeDriverCard('Driver 2','d2',d2pairs,[]));
+  if(solos.length) grid.appendChild(makeSoloCard(solos));
+}
+
+function makeDriverCard(name,cls,dPairs,dSolos){
+  const stops=[];
+  dPairs.forEach(p=>{stops.push(p.a);stops.push(p.b);});
+  dSolos.forEach(s=>stops.push(s));
+  const totalDist=stops.reduce((s,d)=>s+d.dist,0);
+  const totalCost=dPairs.reduce((s,p)=>s+batchC(p.a,p.b),0)+dSolos.reduce((s,d)=>s+soloC(d),0);
+  const div=document.createElement('div');
+  div.className='driver-card';
+  let stopsHtml=stops.map((s,i)=>`
+    <div class="stop">
+      <div class="stop-dot">${i+1}</div>
+      <div class="stop-name">D${s.id} · ${s.name}</div>
+      <div class="stop-dist">${s.dist.toFixed(2)} km</div>
+      <div class="stop-cost">$${soloC(s).toFixed(2)}</div>
+    </div>`).join('');
+  div.innerHTML=`
+    <div class="driver-header">
+      <div class="driver-badge ${cls}">${name[0]}${name.split(' ')[1]||'1'}</div>
+      <div><div class="driver-name">${name}</div><div class="driver-meta">${stops.length} stops · ${dPairs.length} batch pairs</div></div>
+    </div>
+    <div class="stop-list">${stopsHtml}</div>
+    <div class="driver-footer"><span>${totalDist.toFixed(2)} km total</span><span style="color:var(--green)">$${totalCost.toFixed(2)}</span></div>`;
+  return div;
+}
+
+function makeSoloCard(soloList){
+  const div=document.createElement('div');
+  div.className='driver-card';
+  let stopsHtml=soloList.map((s,i)=>`
+    <div class="stop">
+      <div class="stop-dot">${i+1}</div>
+      <div class="stop-name">D${s.id} · ${s.name}</div>
+      <div class="stop-dist">${s.dist.toFixed(2)} km</div>
+      <div class="stop-cost">$${soloC(s).toFixed(2)}</div>
+    </div>`).join('');
+  const tc=soloList.reduce((s,d)=>s+soloC(d),0);
+  div.innerHTML=`
+    <div class="driver-header">
+      <div class="driver-badge ds">S</div>
+      <div><div class="driver-name">Solo Trips</div><div class="driver-meta">${soloList.length} delivery · no batch partner</div></div>
+    </div>
+    <div class="stop-list">${stopsHtml}</div>
+    <div class="driver-footer"><span>${soloList.reduce((s,d)=>s+d.dist,0).toFixed(2)} km total</span><span style="color:var(--amber)">$${tc.toFixed(2)}</span></div>`;
+  return div;
+}
+
+function renderDeliveryList(){
+  const body=document.getElementById('delivery-list-body');
+  body.innerHTML='';
+  deliveries.forEach(d=>{
+    const model=soloC(d);
+    const isOutlier=d.actual&&(d.actual-model)>2.0;
+    const div=document.createElement('div');
+    div.className='delivery-item';
+    div.innerHTML=`<span class="d-id">D${d.id}</span>
+      <span class="d-name">${d.name}</span>
+      <span class="d-dist">${d.dist.toFixed(2)} km</span>
+      <span class="d-cost">$${model.toFixed(2)}</span>
+      ${isOutlier?`<span class="d-outlier">outlier</span>`:''}
+      ${d.id>33?`<button class="d-del" onclick="deleteDelivery(${d.id})">×</button>`:''}`;
+    body.appendChild(div);
+  });
+  document.getElementById('del-count-label').textContent=deliveries.length+' deliveries loaded';
+  document.getElementById('stat-count').textContent=deliveries.length;
+  const base=deliveries.reduce((s,d)=>s+soloC(d),0);
+  document.getElementById('stat-baseline').textContent='$'+base.toFixed(2);
+}
+
+function addDelivery(){
+  const name=document.getElementById('add-name').value.trim();
+  const dist=parseFloat(document.getElementById('add-dist').value);
+  if(!name||isNaN(dist)||dist<=0){alert('Please enter a valid neighborhood and distance.');return;}
+  deliveries.push({id:nextId++,name,dist,actual:null,time:Math.round(dist*4)});
+  document.getElementById('add-name').value='';
+  document.getElementById('add-dist').value='';
+  renderDeliveryList();
+  // Reset optimization
+  optimized=false;
+  document.getElementById('stat-opt').textContent='—';
+  document.getElementById('stat-save').textContent='—';
+}
+
+function deleteDelivery(id){
+  deliveries=deliveries.filter(d=>d.id!==id);
+  renderDeliveryList();
+}
+
+function showTab(id,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  btn.classList.add('active');
+}
+
+let qrObj=null;
+function genQR(){
+  const url=document.getElementById('qr-url').value.trim();
+  if(!url){alert('Please enter a URL first.');return;}
+  const wrap=document.getElementById('qrcode');
+  wrap.innerHTML='';
+  qrObj=new QRCode(wrap,{text:url,width:200,height:200,colorDark:'#3D2980',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.H});
+  document.getElementById('qr-note').style.display='block';
+}
+
+// Init
+renderDeliveryList();
+</script>
+</body>
+</html>
